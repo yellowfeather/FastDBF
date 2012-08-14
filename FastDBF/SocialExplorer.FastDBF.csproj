@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="DbfColumn.cs" />
     <Compile Include="DbfHeader.cs" />
+    <Compile Include="DbfReader.cs" />
     <Compile Include="DbfRecord.cs" />
     <Compile Include="DbfFile.cs" />
     <Compile Include="DbfDataTruncateException.cs" />

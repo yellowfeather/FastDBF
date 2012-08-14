@@ -14,8 +14,7 @@ namespace SocialExplorer.IO.FastDBF
 	/// </remarks>
 	public class DbfFile
 	{
-		[Obsolete]
-		public DbfFile():this(Encoding.Default)
+		public DbfFile() : this(Encoding.Default)
 		{
 		}
 
