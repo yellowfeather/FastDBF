@@ -17,7 +17,7 @@ namespace SocialExplorer.IO.FastDBF
 	/// </summary>
 	public class DbfRecord
 	{
-		//array used to clear decimals, we can clear up to 40 decimals which is much more than is allowed under DBF spec anyway.
+	    //array used to clear decimals, we can clear up to 40 decimals which is much more than is allowed under DBF spec anyway.
 		private static readonly byte[] mDecimalClear = Enumerable.Repeat((byte)'0', 45).ToArray();
 		private readonly Encoding encoding = Encoding.Default;
 
@@ -384,6 +384,32 @@ namespace SocialExplorer.IO.FastDBF
 			return mHeader[index];
 		}
 
+        public bool ColumnEquals(DbfRecord record, int index)
+        {
+            var column = Column(index);
+
+            var offset = column.DataAddress;
+            for (var i = 0; i < column.Length; ++i)
+            {
+                if (mData[offset] != record.mData[offset])
+                {
+                    return false;
+                }
+
+                ++offset;
+            }
+
+            return true;
+        }
+
+        public byte[] ColumnData(int index)
+        {
+            var column = Column(index);
+            var bytes = new byte[column.Length];
+            Array.Copy(mData, column.DataAddress, bytes, 0, column.Length);
+            return bytes;
+        }
+
 		/// <summary>
 		/// Get column by name.
 		/// </summary>
@@ -433,5 +459,32 @@ namespace SocialExplorer.IO.FastDBF
 		{
 			return obr.Read(mData, 0, mData.Length) >= mData.Length;
 		}
-	}
+
+        protected bool Equals(DbfRecord other)
+        {
+            return Equals(this.mData, other.mData);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+            {
+                return false;
+            }
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+            if (obj.GetType() != this.GetType())
+            {
+                return false;
+            }
+            return Equals((DbfRecord)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (this.mData != null ? this.mData.GetHashCode() : 0);
+        }
+    }
 }
