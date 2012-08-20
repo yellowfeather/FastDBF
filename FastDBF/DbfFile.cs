@@ -61,6 +61,11 @@ namespace SocialExplorer.IO.FastDBF
 
 		private Encoding encoding = Encoding.Default;
 
+        /// <summary>
+        /// Returns true if the DBF file has been opened.
+        /// </summary>
+        public bool IsOpen { get { return mDbfFile != null; } }
+
 		/// <summary>
 		/// Returns true if we can not write to the DBF file stream.
 		/// </summary>
