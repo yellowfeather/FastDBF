@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="DbfReader.cs" company="Social Explorer">
+//   Copyright Social Explorer.
+// </copyright>
+// <summary>
+//   The dbf reader.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace SocialExplorer.IO.FastDBF
 {
     using System;
@@ -6,43 +15,61 @@ namespace SocialExplorer.IO.FastDBF
     using System.Data.Common;
     using System.IO;
 
+    /// <summary>
+    /// Provides a way of reading a forward-only stream of data rows from a DBF file.
+    /// </summary>
     public class DbfReader : DbDataReader
     {
+        /// <summary>
+        /// The dbf file.
+        /// </summary>
         private readonly DbfFile dbfFile;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DbfReader"/> class.
+        /// </summary>
         public DbfReader()
         {
-            dbfFile = new DbfFile();
+            this.dbfFile = new DbfFile();
         }
 
-        public DbfReader(string filepath)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DbfReader"/> class and opens it.
+        /// </summary>
+        /// <param name="path">
+        /// The path.
+        /// </param>
+        public DbfReader(string path)
             : this()
         {
-            this.Open(filepath);
+            this.Open(path);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DbfReader"/> class and opens it.
+        /// </summary>
+        /// <param name="stream">
+        /// The stream.
+        /// </param>
         public DbfReader(Stream stream)
             : this()
         {
             this.Open(stream);
         }
 
-        public void Open(string filepath)
-        {
-            dbfFile.Open(filepath, FileMode.Open);
-            this.DbfRecord = new DbfRecord(dbfFile.Header);
-        }
-
-        public void Open(Stream stream)
-        {
-            dbfFile.Open(stream);
-            this.DbfRecord = new DbfRecord(dbfFile.Header);
-        }
-
+        /// <summary>
+        /// Gets or sets a value indicating whether to skip deleted records.
+        /// </summary>
         public bool SkipDeletedRecords { get; set; }
 
+        /// <summary>
+        /// Gets the dbf record.
+        /// </summary>
         public DbfRecord DbfRecord { get; private set; }
 
+        /// <summary>
+        /// Gets the record index.
+        /// </summary>
         public int RecordIndex
         {
             get
@@ -52,12 +79,150 @@ namespace SocialExplorer.IO.FastDBF
         }
 
         /// <summary>
+        /// Gets a value indicating the depth of nesting for the current row.
+        /// </summary>
+        /// <returns>
+        /// The depth of nesting for the current row.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public override int Depth
+        {
+            get
+            {
+                this.GuardOpen("NextResult");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the <see cref="T:System.Data.Common.DbDataReader"/> is closed.
+        /// </summary>
+        /// <returns>
+        /// true if the <see cref="T:System.Data.Common.DbDataReader"/> is closed; otherwise false.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public override bool IsClosed
+        {
+            get
+            {
+                return !this.dbfFile.IsOpen;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of rows changed, inserted, or deleted by execution of the SQL statement. 
+        /// </summary>
+        /// <returns>
+        /// The number of rows changed, inserted, or deleted. -1 for SELECT statements; 0 if no rows were affected or the statement failed.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public override int RecordsAffected
+        {
+            get
+            {
+                this.GuardOpen("NextResult");
+                return (int)this.dbfFile.Header.RecordCount;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of columns in the current row.
+        /// </summary>
+        /// <returns>
+        /// The number of columns in the current row.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public override int FieldCount
+        {
+            get
+            {
+                this.GuardOpen("FieldCount");
+                return this.dbfFile.Header.ColumnCount;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value that indicates whether this <see cref="T:System.Data.Common.DbDataReader"/> contains one or more rows.
+        /// </summary>
+        /// <returns>
+        /// true if the <see cref="T:System.Data.Common.DbDataReader"/> contains one or more rows; otherwise false.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public override bool HasRows
+        {
+            get
+            {
+                this.GuardOpen("HasRows");
+                return this.dbfFile.Header.RecordCount >= 1;
+            }
+        }
+
+        /// <summary>
+        /// Gets the value of the specified column as an instance of <see cref="T:System.Object"/>.
+        /// </summary>
+        /// <returns>
+        /// The value of the specified column.
+        /// </returns>
+        /// <param name="ordinal">The zero-based column ordinal.</param>
+        /// <filterpriority>1</filterpriority>
+        public override object this[int ordinal]
+        {
+            get
+            {
+                this.GuardOpen("array accessor");
+                return this.GetValue(ordinal);
+            }
+        }
+
+        /// <summary>
+        /// Gets the value of the specified column as an instance of <see cref="T:System.Object"/>.
+        /// </summary>
+        /// <returns>
+        /// The value of the specified column.
+        /// </returns>
+        /// <param name="name">The name of the column.</param>
+        /// <filterpriority>1</filterpriority>
+        public override object this[string name]
+        {
+            get
+            {
+                this.GuardOpen("array accessor");
+                var ordinal = this.GetOrdinal(name);
+                return this.GetValue(ordinal);
+            }
+        }
+
+        /// <summary>
+        /// Opens the <see cref="T:SocialExplorer.IO.FastDBF.DbfReader" /> with the specified file path.
+        /// </summary>
+        /// <param name="path">
+        /// The full path to the file to open.
+        /// </param>
+        public void Open(string path)
+        {
+            this.dbfFile.Open(path, FileMode.Open);
+            this.DbfRecord = new DbfRecord(this.dbfFile.Header);
+        }
+
+        /// <summary>
+        /// Opens the <see cref="T:SocialExplorer.IO.FastDBF.DbfReader" /> with the specified stream.
+        /// </summary>
+        /// <param name="stream">
+        /// The stream to open.
+        /// </param>
+        public void Open(Stream stream)
+        {
+            this.dbfFile.Open(stream);
+            this.DbfRecord = new DbfRecord(this.dbfFile.Header);
+        }
+
+        /// <summary>
         /// Closes the <see cref="T:System.Data.Common.DbDataReader"/> object.
         /// </summary>
         /// <filterpriority>1</filterpriority>
         public override void Close()
         {
-            dbfFile.Close();
+            this.dbfFile.Close();
         }
 
         /// <summary>
@@ -81,7 +246,7 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override bool NextResult()
         {
-            GuardOpen("NextResult");
+            this.GuardOpen("NextResult");
 
             return this.ReadInternal();
         }
@@ -95,56 +260,9 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override bool Read()
         {
-            GuardOpen("Read");
+            this.GuardOpen("Read");
 
             return this.ReadInternal();
-        }
-
-        /// <summary>
-        /// Gets a value indicating the depth of nesting for the current row.
-        /// </summary>
-        /// <returns>
-        /// The depth of nesting for the current row.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public override int Depth
-        {
-            get
-            {
-                GuardOpen("NextResult");
-                return 0;
-            }
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether the <see cref="T:System.Data.Common.DbDataReader"/> is closed.
-        /// </summary>
-        /// <returns>
-        /// true if the <see cref="T:System.Data.Common.DbDataReader"/> is closed; otherwise false.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public override bool IsClosed
-        {
-            get
-            {
-                return !dbfFile.IsOpen;
-            }
-        }
-
-        /// <summary>
-        /// Gets the number of rows changed, inserted, or deleted by execution of the SQL statement. 
-        /// </summary>
-        /// <returns>
-        /// The number of rows changed, inserted, or deleted. -1 for SELECT statements; 0 if no rows were affected or the statement failed.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public override int RecordsAffected
-        {
-            get
-            {
-                GuardOpen("NextResult");
-                return (int)dbfFile.Header.RecordCount;
-            }
         }
 
         /// <summary>
@@ -377,76 +495,8 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override bool IsDBNull(int ordinal)
         {
-            GuardOpen("IsDBNull");
-
+            this.GuardOpen("IsDBNull");
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Gets the number of columns in the current row.
-        /// </summary>
-        /// <returns>
-        /// The number of columns in the current row.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public override int FieldCount
-        {
-            get
-            {
-                GuardOpen("FieldCount");
-                return dbfFile.Header.ColumnCount;
-            }
-        }
-
-        /// <summary>
-        /// Gets the value of the specified column as an instance of <see cref="T:System.Object"/>.
-        /// </summary>
-        /// <returns>
-        /// The value of the specified column.
-        /// </returns>
-        /// <param name="ordinal">The zero-based column ordinal.</param>
-        /// <filterpriority>1</filterpriority>
-        public override object this[int ordinal]
-        {
-            get
-            {
-                GuardOpen("array accessor");
-                return this.GetValue(ordinal);
-            }
-        }
-
-        /// <summary>
-        /// Gets the value of the specified column as an instance of <see cref="T:System.Object"/>.
-        /// </summary>
-        /// <returns>
-        /// The value of the specified column.
-        /// </returns>
-        /// <param name="name">The name of the column.</param>
-        /// <filterpriority>1</filterpriority>
-        public override object this[string name]
-        {
-            get
-            {
-                GuardOpen("array accessor");
-                var ordinal = this.GetOrdinal(name);
-                return this.GetValue(ordinal);
-            }
-        }
-
-        /// <summary>
-        /// Gets a value that indicates whether this <see cref="T:System.Data.Common.DbDataReader"/> contains one or more rows.
-        /// </summary>
-        /// <returns>
-        /// true if the <see cref="T:System.Data.Common.DbDataReader"/> contains one or more rows; otherwise false.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public override bool HasRows
-        {
-            get
-            {
-                GuardOpen("HasRows");
-                return dbfFile.Header.RecordCount >= 1;
-            }
         }
 
         /// <summary>
@@ -508,7 +558,7 @@ namespace SocialExplorer.IO.FastDBF
             this.GuardOpen("GetName");
             this.GuardOrdinal("GetName", ordinal);
 
-            var dbfColumn = dbfFile.Header[ordinal];
+            var dbfColumn = this.dbfFile.Header[ordinal];
             return dbfColumn.Name;
         }
 
@@ -525,7 +575,7 @@ namespace SocialExplorer.IO.FastDBF
         {
             this.GuardOpen("GetOrdinal");
 
-            var ordinal = dbfFile.Header.FindColumn(name);
+            var ordinal = this.dbfFile.Header.FindColumn(name);
             this.GuardOrdinal("GetOrdinal", ordinal);
 
             return ordinal;
@@ -541,7 +591,7 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override string GetDataTypeName(int ordinal)
         {
-            GuardOpen("GetDataTypeName");
+            this.GuardOpen("GetDataTypeName");
             throw new NotImplementedException();
         }
 
@@ -555,7 +605,7 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override Type GetFieldType(int ordinal)
         {
-            GuardOpen("GetFieldType");
+            this.GuardOpen("GetFieldType");
             throw new NotImplementedException();
         }
 
@@ -568,7 +618,7 @@ namespace SocialExplorer.IO.FastDBF
         /// <filterpriority>1</filterpriority>
         public override IEnumerator GetEnumerator()
         {
-            GuardOpen("GetEnumerator");
+            this.GuardOpen("GetEnumerator");
             return new DbEnumerator(this);
         }
 
@@ -608,7 +658,7 @@ namespace SocialExplorer.IO.FastDBF
         private void GuardOrdinal(string methodName, int ordinal)
 // ReSharper restore UnusedParameter.Local
         {
-            if (ordinal >= dbfFile.Header.ColumnCount)
+            if (ordinal >= this.dbfFile.Header.ColumnCount)
             {
                 throw new IndexOutOfRangeException(methodName);
             }
@@ -624,18 +674,18 @@ namespace SocialExplorer.IO.FastDBF
         private void GuardColumnType(string methodName, int ordinal, DbfColumn.DbfColumnType dbfColumnType)
 // ReSharper restore UnusedParameter.Local
         {
-            if (dbfFile.Header[ordinal].ColumnType != dbfColumnType)
+            if (this.dbfFile.Header[ordinal].ColumnType != dbfColumnType)
             {
                 throw new InvalidOperationException(methodName);
             }
         }
 
         /// <summary>
-        /// 
+        /// Guards against incorrect segment length.
         /// </summary>
-        /// <param name="methodName"></param>
-        /// <param name="segment"></param>
-        /// <param name="length"></param>
+        /// <param name="methodName">The name of the calling method.</param>
+        /// <param name="segment">The array segment.</param>
+        /// <param name="length">The expected length.</param>
 // ReSharper disable UnusedParameter.Local
         private void GuardLength(string methodName, ArraySegment<byte> segment, int length)
 // ReSharper restore UnusedParameter.Local
