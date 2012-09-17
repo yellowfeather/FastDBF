@@ -3,7 +3,7 @@
 //   Copyright Social Explorer.
 // </copyright>
 // <summary>
-//   The dbf reader.
+//   Provides a way of reading a forward-only stream of data rows from a DBF file.
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
